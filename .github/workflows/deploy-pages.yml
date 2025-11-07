@@ -2,7 +2,7 @@ name: Deploy Flutter Web to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -17,44 +17,38 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ---- Setup Flutter stable ----
-      - name: Setup Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: "stable"
 
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Fetch packages
+      - name: Get Flutter packages
         run: flutter pub get
 
-      # ---- Build Flutter Web for GitHub Pages ----
-      - name: Build Flutter Web
+      - name: Build Flutter web
         run: |
-          # 👉 IMPORTANT: change ONLY the repo name below
-          REPO_NAME="unit_converter"   # <--- ✅ CHANGE THIS if your repo name differs
-
+          REPO_NAME="unit_converter"   # ✅ CHANGE THIS TO YOUR EXACT REPO NAME
           flutter build web --release --base-href "/${REPO_NAME}/"
-          
-          # Fix routing (GitHub Pages requires this)
           cp build/web/index.html build/web/404.html
 
-      - name: Upload artifact
+      - name: Upload built site
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
 
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
     steps:
       - name: Deploy to GitHub Pages
-        id: deployment
+        id: deploy
+        uses: actions/deploy-pages@v4
