@@ -324,7 +324,7 @@ class _ConverterHomeState extends State<ConverterHome> {
 
                   // ---------------- Footer ----------------
                   const SizedBox(height: 18),
-                  const SiteFooter(),
+                  SiteFooter(),
                 ],
               ),
             ),

@@ -1,92 +1,30 @@
-// ===========================================================
-// widgets/footer.dart
-// - Responsive footer with real links where available
-// - "Coming soon" toast for pages you haven't built yet
-// - Mailto feedback + Buy Me a Coffee button wired up
-// - Glass-friendly look to match your UI
-// ===========================================================
-
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'feedback_dialog.dart';
+
+/// Footer with internal routes, external GitHub links, mailto fallback,
+/// and a Buy Me a Coffee button.
+///
+/// UPDATE THESE TWO CONSTANTS:
+const String GITHUB_USERNAME = 'DarthPlagueis123';// <-- set once
+const String BMC_URL = 'https://www.buymeacoffee.com/DarthPlagueis123';
 
 class SiteFooter extends StatelessWidget {
-  const SiteFooter({super.key});
+  SiteFooter({super.key});
 
-  // -----------------------------------------------------------
-  // Centralized link config
-  // - If you don't have a page yet, set comingSoon: true.
-  // - Real links (GitHub issues, coffee, mailto) are live.
-  // -----------------------------------------------------------
+  Uri get _bugUrl => Uri.parse('https://github.com/$GITHUB_USERNAME/unit-converter/issues');
+  Uri get _featureUrl => Uri.parse(
+      'https://github.com/$GITHUB_USERNAME/unit-converter/issues/new?template=feature_request.md');
+  Uri get _coffeeUrl => Uri.parse(BMC_URL);
 
-  // Product
-  static final _productLinks = <({String label, Uri? url, bool comingSoon})>[
-    (label: 'Unit Converter',     url: null, comingSoon: true),
-    (label: 'Formula Breakdown',  url: null, comingSoon: true),
-    (label: 'Categories',         url: null, comingSoon: true),
-    (label: 'What’s New',         url: null, comingSoon: true),
-  ];
-
-  // Resources
-  static final _resourceLinks = <({String label, Uri? url, bool comingSoon})>[
-    (label: 'Docs (coming soon)', url: null, comingSoon: true),
-    (label: 'Tips & Tricks',      url: null, comingSoon: true),
-    // These two are live (replace with your GitHub repo if needed)
-    (
-      label: 'Report a Bug',
-      url: Uri.parse('https://github.com/yourname/unit-converter/issues'),
-      comingSoon: false
-    ),
-    (
-      label: 'Request a Feature',
-      url: Uri.parse(
-        'https://github.com/yourname/unit-converter/issues/new?template=feature_request.md',
-      ),
-      comingSoon: false
-    ),
-  ];
-
-  // Legal
-  static final _legalLinks = <({String label, Uri? url, bool comingSoon})>[
-    (label: 'Privacy Policy', url: null, comingSoon: true),
-    (label: 'Terms of Use',   url: null, comingSoon: true),
-    (label: 'Cookie Policy',  url: null, comingSoon: true),
-  ];
-
-  // Buy Me a Coffee (replace handle when ready)
-  static final Uri _coffeeUrl =
-      Uri.parse('https://www.buymeacoffee.com/yourname');
-
-  // Mailto feedback (replace email + subject/body as desired)
-  static final Uri _mailtoFeedback = Uri(
+  // Optional fallback
+  final Uri _mailtoFeedback = Uri(
     scheme: 'mailto',
-    path: 'you@example.com',
-    query:
-        'subject=Unit Converter Feedback&body=Hi! I have some feedback:%0D%0A%0D%0A',
+    path: 'nkransfeld@gmail.com', // in FeedbackDialog.TARGET_EMAIL
+    query: 'subject=Unit Converter Feedback&body=Hi! I have some feedback:%0D%0A%0D%0A',
   );
 
-  // -----------------------------------------------------------
-  // Open helper:
-  // - If comingSoon, show a friendly toast.
-  // - Else launch external (new tab on web / browser on mobile+desktop).
-  // -----------------------------------------------------------
-  Future<void> _openOrNotify(
-    BuildContext context, {
-    Uri? url,
-    required bool comingSoon,
-  }) async {
-    if (comingSoon || url == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Coming soon ✨'),
-            duration: Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      return;
-    }
-
+  Future<void> _open(BuildContext context, Uri url) async {
     final ok = await launchUrl(url, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,16 +33,12 @@ class SiteFooter extends StatelessWidget {
     }
   }
 
-  // -----------------------------------------------------------
-  // Reusable link column
-  // -----------------------------------------------------------
   Widget _linkColumn(
     BuildContext context, {
     required String title,
-    required List<({String label, Uri? url, bool comingSoon})> links,
+    required List<({String label, String? route, Uri? external})> items,
   }) {
-    final textColor =
-        Theme.of(context).colorScheme.onSurface.withOpacity(0.85);
+    final textColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.85);
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 160),
@@ -117,44 +51,30 @@ class SiteFooter extends StatelessWidget {
                   .titleSmall
                   ?.copyWith(fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
-          for (final item in links)
+          for (final item in items)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: InkWell(
-                onTap: () => _openOrNotify(
-                  context,
-                  url: item.url,
-                  comingSoon: item.comingSoon,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      item.label,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: textColor,
-                            decoration: TextDecoration.underline,
-                            decorationColor: textColor.withOpacity(0.6),
-                          ),
-                    ),
-                    if (item.comingSoon) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'soon',
-                          style: TextStyle(fontSize: 11),
-                        ),
+                onTap: () async {
+                  if (item.route != null) {
+                    if (context.mounted) Navigator.of(context).pushNamed(item.route!);
+                  } else if (item.external != null) {
+                    await _open(context, item.external!);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Coming soon ✨')),
+                      );
+                    }
+                  }
+                },
+                child: Text(
+                  item.label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: textColor,
+                        decoration: TextDecoration.underline,
+                        decorationColor: textColor.withOpacity(0.6),
                       ),
-                    ],
-                  ],
                 ),
               ),
             ),
@@ -163,9 +83,6 @@ class SiteFooter extends StatelessWidget {
     );
   }
 
-  // -----------------------------------------------------------
-  // CTA buttons (Coffee + Email)
-  // -----------------------------------------------------------
   Widget _coffeeButton(BuildContext context) {
     return ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
@@ -175,39 +92,64 @@ class SiteFooter extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      onPressed: () => _openOrNotify(
-        context,
-        url: _coffeeUrl,
-        comingSoon: false,
-      ),
+      onPressed: () => _open(context, _coffeeUrl),
       icon: const Icon(Icons.local_cafe_outlined),
       label: const Text('Buy me a coffee'),
     );
   }
 
-  Widget _emailButton(BuildContext context) {
+  Widget _feedbackButton(BuildContext context) {
     final border = Colors.white.withOpacity(0.28);
     return OutlinedButton.icon(
       style: OutlinedButton.styleFrom(
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         side: BorderSide(color: border),
       ),
-      onPressed: () => _openOrNotify(
-        context,
-        url: _mailtoFeedback,
-        comingSoon: false,
-      ),
-      icon: const Icon(Icons.email_outlined),
-      label: const Text('Email feedback'),
+      onPressed: () {
+        showDialog(context: context, builder: (_) => const FeedbackDialog());
+      },
+      icon: const Icon(Icons.feedback_outlined),
+      label: const Text('Send feedback'),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final panel = Colors.white.withOpacity(0.14); // translucent panel
-    final border = Colors.white.withOpacity(0.28); // subtle border
+    final panel = Colors.white.withOpacity(0.14);
+    final border = Colors.white.withOpacity(0.28);
 
-    // Top: link columns + CTA column (responsive)
+    final product = _linkColumn(
+      context,
+      title: 'Product',
+      items: [
+        (label: 'Unit Converter', route: '/', external: null),
+        (label: 'Formula Breakdown', route: '/docs', external: null),
+        (label: 'Categories', route: '/docs', external: null),
+        (label: 'What’s New', route: '/docs', external: null),
+      ],
+    );
+
+    final resources = _linkColumn(
+      context,
+      title: 'Resources',
+      items: [
+        (label: 'Docs (coming soon)', route: '/docs', external: null),
+        (label: 'Tips & Tricks', route: '/docs', external: null),
+        (label: 'Report a Bug', route: null, external: _bugUrl),
+        (label: 'Request a Feature', route: null, external: _featureUrl),
+      ],
+    );
+
+    final legal = _linkColumn(
+      context,
+      title: 'Legal',
+      items: [
+        (label: 'Privacy Policy', route: '/privacy', external: null),
+        (label: 'Terms of Use', route: '/terms', external: null),
+        (label: 'Cookie Policy', route: '/docs', external: null),
+      ],
+    );
+
     final columns = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -222,14 +164,8 @@ class SiteFooter extends StatelessWidget {
           final left = Wrap(
             spacing: 24,
             runSpacing: 16,
-            alignment: isNarrow
-                ? WrapAlignment.start
-                : WrapAlignment.spaceBetween,
-            children: [
-              _linkColumn(context, title: 'Product', links: _productLinks),
-              _linkColumn(context, title: 'Resources', links: _resourceLinks),
-              _linkColumn(context, title: 'Legal', links: _legalLinks),
-            ],
+            alignment: isNarrow ? WrapAlignment.start : WrapAlignment.spaceBetween,
+            children: [product, resources, legal],
           );
 
           final rightCtas = Column(
@@ -237,7 +173,7 @@ class SiteFooter extends StatelessWidget {
             children: [
               _coffeeButton(context),
               const SizedBox(height: 10),
-              _emailButton(context),
+              _feedbackButton(context),
             ],
           );
 
@@ -258,7 +194,6 @@ class SiteFooter extends StatelessWidget {
       ),
     );
 
-    // Bottom bar: © + Made with Flutter + quick feedback
     final year = DateTime.now().year;
     final bottomBar = Container(
       height: 48,
@@ -284,11 +219,9 @@ class SiteFooter extends StatelessWidget {
             ),
           ),
           TextButton.icon(
-            onPressed: () => _openOrNotify(
-              context,
-              url: _mailtoFeedback,
-              comingSoon: false,
-            ),
+            onPressed: () {
+              showDialog(context: context, builder: (_) => const FeedbackDialog());
+            },
             icon: const Icon(Icons.feedback_outlined, size: 18),
             label: const Text('Feedback'),
           ),
