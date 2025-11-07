@@ -32,9 +32,17 @@ jobs:
 
       - name: Build Flutter web
         run: |
-          REPO_NAME="unit_converter"   # ✅ CHANGE THIS TO YOUR EXACT REPO NAME
+          REPO_NAME="unit_converter"  
           flutter build web --release --base-href "/${REPO_NAME}/"
           cp build/web/index.html build/web/404.html
+
+      - name: Show build output (debug)
+        run: |
+          echo "----- index.html base href -----"
+          grep -n "<base href" build/web/index.html || true
+          echo "----- list build/web -----"
+          ls -la build/web
+
 
       - name: Upload built site
         uses: actions/upload-pages-artifact@v3
