@@ -16,7 +16,7 @@ class FormulaPanel extends StatelessWidget {
 
     final lines = breakdownText.split('\n');
 
-    Widget _line(String s) {
+    Widget line(String s) {
       // Header lines (no bullet): "Linear conversion (...)", "Temperature ...", "Direct ratio", "Result"
       final isHeader = s.trim().isNotEmpty &&
           (s.startsWith('Linear conversion') ||
@@ -64,7 +64,7 @@ class FormulaPanel extends StatelessWidget {
         childrenPadding: const EdgeInsets.only(bottom: 12),
         children: [
           // tight vertical spacing
-          ...lines.map(_line),
+          ...lines.map(line),
         ],
       ),
     );

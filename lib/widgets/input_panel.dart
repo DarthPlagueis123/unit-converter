@@ -40,7 +40,7 @@ class InputPanel extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: fromUnit,
+              initialValue: fromUnit,
               items: units.map((u)=>DropdownMenuItem(value:u,child: Text(u))).toList(),
               onChanged: (u){ if(u!=null) onFromUnitChanged(u); },
               decoration: const InputDecoration(labelText:'From', isDense: true),

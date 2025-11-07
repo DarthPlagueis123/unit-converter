@@ -31,9 +31,8 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web
-        run: |
-          REPO_NAME="unit-converter"  
-          flutter build web --release --base-href "/${REPO_NAME}/"
+        run: | 
+          flutter build web --release --base-href "/"
           cp build/web/index.html build/web/404.html
 
       - name: Show build output (debug)

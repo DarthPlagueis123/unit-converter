@@ -36,7 +36,7 @@ class ResultPanel extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: toUnit,
+              initialValue: toUnit,
               items: units.map((u)=>DropdownMenuItem(value:u,child: Text(u))).toList(),
               onChanged: (u){ if(u!=null) onToUnitChanged(u); },
               decoration: const InputDecoration(labelText:'To', isDense: true),
