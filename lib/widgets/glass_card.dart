@@ -1,61 +1,29 @@
-// ===========================================================
-// widgets/glass_card.dart
-// - Reusable glass-morphism "floating card"
-// - Blurred background, translucent fill, soft border & glow
-// ===========================================================
+// lib/widgets/glass_card.dart
+// REUSABLE GLASS CARD — backdrop blur + translucent background.
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class GlassCard extends StatelessWidget {
   final Widget child;
-  final EdgeInsetsGeometry padding;
-  final double borderRadius;
-  final double blurSigma;
-  final double opacity;
 
-  const GlassCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(16),
-    this.borderRadius = 18,
-    this.blurSigma = 16,
-    this.opacity = 0.14, // translucency of the fill
-  });
+  const GlassCard({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(borderRadius);
-
     return ClipRRect(
-      borderRadius: radius,
+      borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
-        // Frosted glass blur
-        filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: padding,
           decoration: BoxDecoration(
-            // Semi-transparent fill over the blurred background
-            color: Colors.white.withOpacity(opacity),
-            borderRadius: radius,
-            // Gentle glassy border + subtle inner gradient
-            border: Border.all(
-              color: Colors.white.withOpacity(0.35),
-              width: 1,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(opacity + 0.06),
-                Colors.white.withOpacity(opacity - 0.02),
-              ],
-            ),
-            // Soft drop shadow to "float" the card
+            color: Colors.white.withOpacity(0.45),
+            border: Border.all(color: Colors.white.withOpacity(0.5)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.10),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),

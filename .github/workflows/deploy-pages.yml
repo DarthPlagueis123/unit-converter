@@ -42,7 +42,6 @@ jobs:
           echo "----- list build/web -----"
           ls -la build/web
 
-
       - name: Upload built site
         uses: actions/upload-pages-artifact@v3
         with:

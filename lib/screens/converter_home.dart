@@ -1,18 +1,18 @@
-// ===========================================================
-// screens/converter_home.dart
-// - Glass-morphism floating card (main content)
-// - NEW: Footer added under the card so the page feels complete
-// - Fills tall screens (no awkward empty void at bottom)
-// ===========================================================
+// lib/converter_home.dart
+//
+// Uses your shared conversion/format utilities and widgets that you export
+// through the barrel `converter.dart`. No local formatter here.
+//
+// Barrel should export:
+// - widgets: InputPanel, ResultPanel, FormulaPanel, GlassCard, SiteFooter
+// - utils: convertLinear, convertTemperature, buildFormulaBreakdown, formatNumber
+// - data:  kLinearFactors (Map<String, Map<String,double>>)
+//
+// If your barrel doesn't re-export one of the above yet, either add it there
+// or import the file directly.
+
 import 'package:flutter/material.dart';
-import '../data/units.dart';
-import '../utils/conversion.dart';
-import '../utils/format.dart';
-import '../widgets/input_panel.dart';
-import '../widgets/result_panel.dart';
-import '../widgets/formula_panel.dart';
-import '../widgets/glass_card.dart';
-import '../widgets/footer.dart';
+import 'package:unit_converter/converter.dart';
 
 class ConverterHome extends StatefulWidget {
   const ConverterHome({super.key});
@@ -22,315 +22,384 @@ class ConverterHome extends StatefulWidget {
 }
 
 class _ConverterHomeState extends State<ConverterHome> {
-  // -----------------------------
-  // Current category & unit state
-  // -----------------------------
-  String _category = 'Length';
-  late String _fromUnit;
-  late String _toUnit;
+  // ----- Scroll support for "Start converting" button -----
+  final _scrollController = ScrollController();
+  final _converterKey = GlobalKey();
 
-  // -----------------------------
-  // Controllers & derived strings
-  // -----------------------------
+  // ----- Category / units state -----
+  // We derive categories from kLinearFactors keys and add Temperature explicitly.
+  late final List<String> _categories =
+      (kLinearFactors.keys.toList()..sort()) + const ['Temperature'];
+
+  // Active category (default to first linear category if present)
+  late String _category =
+      (kLinearFactors.isNotEmpty ? kLinearFactors.keys.first : 'Length');
+
+  // Units for the active category
+  List<String> _units = const [];
+
+  // Selected units
+  String _fromUnit = '';
+  String _toUnit = '';
+
+  // Text controllers for input/result fields
   final TextEditingController _inputController = TextEditingController();
-  final TextEditingController _resultController =
-      TextEditingController(text: '—');
-  String _formulaText = '';
+  final TextEditingController _resultController = TextEditingController();
+
+  // Formula breakdown text for FormulaPanel
+  String _breakdownText = '';
 
   @override
   void initState() {
     super.initState();
-    final units = kUnits[_category]!;
-    _fromUnit = units.first;
-    _toUnit = units.length > 1 ? units[1] : units.first;
+    _refreshUnitsForCategory(_category);
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _inputController.dispose();
     _resultController.dispose();
     super.dispose();
   }
 
-  // -------------------------------------
-  // Helpers: category reset / swap / math
-  // -------------------------------------
-  void _resetUnitsForCategory(String cat) {
-    final units = kUnits[cat]!;
+  // ----------------- Helpers -----------------
+
+  void _scrollToConverter() {
+    final ctx = _converterKey.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeInOut,
+      alignment: 0.05,
+    );
+  }
+
+  void _refreshUnitsForCategory(String category) {
+    List<String> units;
+    if (category == 'Temperature') {
+      units = const ['celsius', 'fahrenheit', 'kelvin'];
+    } else {
+      units = (kLinearFactors[category]?.keys.toList() ?? <String>[]);
+      if (units.isEmpty) {
+        // Minimal fallback to avoid crashes if a category is empty/missing.
+        units = const ['unitA', 'unitB'];
+      }
+    }
+    units.sort();
+
     setState(() {
-      _category = cat;
+      _category = category;
+      _units = units;
       _fromUnit = units.first;
       _toUnit = units.length > 1 ? units[1] : units.first;
-      _inputController.text = '';
-      _resultController.text = '—';
-      _formulaText = '';
+      _resultController.text = '';
+      _breakdownText = '';
     });
+
+    _recompute(); // compute if input already present
   }
 
-  void _swapUnits() {
-    setState(() {
-      final tmp = _fromUnit;
-      _fromUnit = _toUnit;
-      _toUnit = tmp;
-    });
-    _convert();
-  }
+  void _recompute() {
+    final inputRaw = _inputController.text.trim();
 
-  void _convert() {
-    final raw = _inputController.text.trim();
-    if (raw.isEmpty) {
-      setState(() {
-        _resultController.text = '—';
-        _formulaText = '';
-      });
-      return;
-    }
-    final value = double.tryParse(raw);
-    if (value == null) {
-      setState(() {
-        _resultController.text = 'Invalid number';
-        _formulaText = '';
-      });
+    if (inputRaw.isEmpty) {
+      _resultController.text = '';
+      setState(() => _breakdownText = '');
       return;
     }
 
-    final out = (_category == 'Temperature')
-        ? convertTemperature(value: value, from: _fromUnit, to: _toUnit)
-        : convertLinear(
-            value: value,
-            category: _category,
-            from: _fromUnit,
-            to: _toUnit,
-          );
+    final x = double.tryParse(inputRaw);
+    if (x == null) {
+      _resultController.text = '';
+      setState(() => _breakdownText = 'Input is not a valid number.');
+      return;
+    }
 
-    _resultController.text = formatNumber(out);
-    _formulaText = buildFormulaBreakdown(
-      category: _category,
-      value: value,
-      from: _fromUnit,
-      to: _toUnit,
-    );
+    double y;
+    try {
+      if (_category == 'Temperature') {
+        y = convertTemperature(value: x, from: _fromUnit, to: _toUnit);
+      } else {
+        y = convertLinear(
+          value: x,
+          category: _category,
+          from: _fromUnit,
+          to: _toUnit,
+        );
+      }
+
+      _resultController.text = formatNumber(y);
+      _breakdownText = buildFormulaBreakdown(
+        category: _category,
+        value: x,
+        from: _fromUnit,
+        to: _toUnit,
+      );
+    } catch (e) {
+      _resultController.text = '';
+      _breakdownText = 'Conversion error: $e';
+    }
+
     setState(() {});
   }
 
-  // ----------------------------------------------------
-  // Context-aware TIP content (varies by current category)
-  // ----------------------------------------------------
-  String _categoryTip() {
-    String? baseOf(String cat) {
-      final map = kLinearFactors[cat];
-      if (map == null) return null;
-      for (final e in map.entries) {
-        if ((e.value - 1.0).abs() < 1e-12) return e.key;
-      }
-      return map.isNotEmpty ? map.keys.first : null;
-    }
+  // ----------------- UI sections -----------------
 
-    switch (_category) {
-      case 'Temperature':
-        return 'Temperature uses Celsius as pivot: first convert to °C, then from °C to the target unit.';
-      case 'Data':
-        return 'Data uses binary multiples (KiB, MiB, GiB). 1 KiB = 1024 bytes (not 1000).';
-      case 'Speed':
-        return 'Speed pivots via meter/second. 1 knot = 1852 m/h; mph uses statute miles.';
-      case 'Volume':
-        return 'Volume pivots via cubic meter. US customary units (gal, qt, pt, cup, tbsp, tsp) are used.';
-      case 'Area':
-        return 'Area pivots via square meter. 1 hectare = 10,000 m²; 1 acre ≈ 4046.8564224 m².';
-      case 'Angle':
-        return 'Angle pivots via radians. 1 turn = 2π radians = 360°; gradian uses 400 grads per turn.';
-      case 'Time':
-        return 'Time pivots via second. Watch rounding when mixing very large and small units.';
-      case 'Weight':
-        return 'Weight pivots via kilogram. Pound/ounce here are avoirdupois (US common).';
-      case 'Length':
-        return 'Length pivots via meter. Inch = 2.54 cm exactly; mile = 1609.344 m.';
-      default:
-        final base = baseOf(_category);
-        if (base != null) return 'This category pivots through $base using simple multipliers.';
-        return 'Edit units & factors under data/units.dart.';
-    }
+  Widget _buildHero() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(height: 18),
+        Icon(Icons.swap_horiz, size: 64, color: Colors.blueAccent.withOpacity(0.85)),
+        const SizedBox(height: 12),
+        Text(
+          'Fast, Accurate Unit Conversion',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 30,
+            height: 1.15,
+            fontWeight: FontWeight.w800,
+            color: Colors.black.withOpacity(0.85),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Convert length, weight, temperature, speed, area, data, and more — instantly.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _scrollToConverter,
+          icon: const Icon(Icons.tune),
+          label: const Text('Start converting'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          ),
+        ),
+        const SizedBox(height: 14),
+      ],
+    );
   }
 
-  // A subtle translucent tip bar that matches the glass style
-  Widget _buildTipBar(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.14),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.30)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 2),
-            child: Icon(Icons.info_outline, size: 18),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _categoryTip(),
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ],
+  Widget _buildIntro() {
+    return GlassCard(
+      child: const Padding(
+        padding: EdgeInsets.all(18.0),
+        child: Text(
+          'Convert Units Pro is a free, fast, and privacy-friendly converter. '
+          'Type a value and see precise results immediately, with formula breakdowns where applicable. '
+          'No login required — works on desktop and mobile.',
+          style: TextStyle(fontSize: 16),
+        ),
       ),
     );
   }
+
+  Widget _buildWhyUse() {
+    return GlassCard(
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 18.0, vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Why use this converter?',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            SizedBox(height: 10),
+            Text('• Fast, accurate calculations with clear formatting'),
+            Text('• Clean interface with glass-morphism styling'),
+            Text('• Supports all major unit categories'),
+            Text('• Works offline in many browsers (installed as a PWA)'),
+            Text('• No account or tracking needed'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureCards() {
+    const items = [
+      _Feature(
+        icon: Icons.straighten,
+        title: '10+ Categories',
+        desc: 'Length, weight, temperature, speed, area, data, and more.',
+      ),
+      _Feature(
+        icon: Icons.bolt,
+        title: 'Instant Results',
+        desc: 'Calculations update as you type — no extra clicks.',
+      ),
+      _Feature(
+        icon: Icons.shield,
+        title: 'Privacy First',
+        desc: 'No login, no cookies, no tracking scripts.',
+      ),
+      _Feature(
+        icon: Icons.devices,
+        title: 'Works Everywhere',
+        desc: 'Responsive on desktop, tablet, and mobile.',
+      ),
+    ];
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 16,
+      children: items.map((f) {
+        return SizedBox(
+          width: 320,
+          child: GlassCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _FeatureTile(feature: f),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCategoryPicker() {
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+        child: Row(
+          children: [
+            const Text('Category:', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(width: 12),
+            Flexible(
+              child: DropdownButtonFormField<String>(
+                value: _category,
+                items: _categories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (c) {
+                  if (c != null) _refreshUnitsForCategory(c);
+                },
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConverterArea() {
+    return GlassCard(
+      key: _converterKey,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Unit Converter',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+
+            // LEFT: input text + "From" dropdown
+            InputPanel(
+              units: _units,
+              fromUnit: _fromUnit,
+              inputController: _inputController,
+              onInputChanged: (_) => _recompute(),
+              onFromUnitChanged: (u) {
+                setState(() => _fromUnit = u);
+                _recompute();
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // RIGHT: result (read-only) + "To" dropdown
+            ResultPanel(
+              units: _units,
+              toUnit: _toUnit,
+              resultController: _resultController,
+              onToUnitChanged: (u) {
+                setState(() => _toUnit = u);
+                _recompute();
+              },
+            ),
+            const SizedBox(height: 12),
+
+            // FORMULA: breakdown of the math
+            FormulaPanel(breakdownText: _breakdownText),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFooter() => SiteFooter();
 
   @override
   Widget build(BuildContext context) {
-    // NOTE: We’ll make the whole page (card + footer) at least as tall as the viewport,
-    // so the footer sits at the bottom even if content is short.
-    final viewportHeight = MediaQuery.of(context).size.height;
-
-    final unitsForCat = kUnits[_category] ?? const <String>[];
-
-    // Panels
-    final leftPanel = InputPanel(
-      units: unitsForCat,
-      fromUnit: _fromUnit,
-      inputController: _inputController,
-      onInputChanged: (s) => _convert(),
-      onFromUnitChanged: (u) {
-        setState(() => _fromUnit = u);
-        _convert();
-      },
-    );
-
-    final rightPanel = ResultPanel(
-      units: unitsForCat,
-      toUnit: _toUnit,
-      resultController: _resultController,
-      onToUnitChanged: (u) {
-        setState(() => _toUnit = u);
-        _convert();
-      },
-    );
-
-    final swapButton = IconButton.filledTonal(
-      onPressed: _swapUnits,
-      icon: const Icon(Icons.swap_horiz),
-      tooltip: 'Swap units',
-    );
-
-    // Ad placeholder (fits glass style)
-    final adBox = Container(
-      height: 90,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.28)),
-      ),
-      child: const Text('Ad space'),
-    );
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Unit Converter'),
-        centerTitle: true,
-      ),
-
-      // Anchor content to TOP; put content + footer into a min-height column
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 980),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            child: ConstrainedBox(
-              // This ensures the column (card + footer) fills the screen height,
-              // so the footer lands at the bottom when content is short.
-              constraints: BoxConstraints(minHeight: viewportHeight - kToolbarHeight),
+      appBar: AppBar(title: const Text('Convert Units Pro')),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFEAF6FF), Color(0xFFF7FBFF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 22, 16, 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ---------------- Main glass card ----------------
-                  GlassCard(
-                    borderRadius: 22,
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWide = constraints.maxWidth >= 760;
-
-                        // Category chips
-                        final chips = Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          alignment: WrapAlignment.center,
-                          children: kUnits.keys.map((cat) {
-                            final selected = _category == cat;
-                            return ChoiceChip(
-                              label: Text(cat),
-                              selected: selected,
-                              onSelected: (_) => _resetUnitsForCategory(cat),
-                            );
-                          }).toList(),
-                        );
-
-                        if (isWide) {
-                          // ---- Wide layout ----
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              chips,
-                              const SizedBox(height: 16),
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: leftPanel),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: swapButton,
-                                  ),
-                                  Expanded(child: rightPanel),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              FormulaPanel(breakdownText: _formulaText),
-                              const SizedBox(height: 14),
-                              _buildTipBar(context),
-                              const SizedBox(height: 12),
-                              adBox,
-                            ],
-                          );
-                        } else {
-                          // ---- Compact layout ----
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              chips,
-                              const SizedBox(height: 14),
-                              leftPanel,
-                              const SizedBox(height: 10),
-                              Align(alignment: Alignment.centerLeft, child: swapButton),
-                              const SizedBox(height: 10),
-                              rightPanel,
-                              const SizedBox(height: 12),
-                              FormulaPanel(breakdownText: _formulaText),
-                              const SizedBox(height: 12),
-                              _buildTipBar(context),
-                              const SizedBox(height: 10),
-                              adBox,
-                            ],
-                          );
-                        }
-                      },
-                    ),
-                  ),
-
-                  // ---------------- Footer ----------------
-                  const SizedBox(height: 18),
-                  SiteFooter(),
+                  _buildHero(),
+                  _buildIntro(),
+                  const SizedBox(height: 16),
+                  _buildWhyUse(),
+                  const SizedBox(height: 16),
+                  _buildFeatureCards(),
+                  const SizedBox(height: 22),
+                  _buildCategoryPicker(),
+                  const SizedBox(height: 14),
+                  _buildConverterArea(),
+                  const SizedBox(height: 16),
+                  _buildFooter(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---- Small feature model + tile ----
+class _Feature {
+  final IconData icon;
+  final String title;
+  final String desc;
+  const _Feature({required this.icon, required this.title, required this.desc});
+}
+
+class _FeatureTile extends StatelessWidget {
+  final _Feature feature;
+  const _FeatureTile({super.key, required this.feature});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(feature.icon, size: 30, color: Colors.blueAccent),
+        const SizedBox(height: 10),
+        Text(feature.title,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Text(feature.desc),
+      ],
     );
   }
 }

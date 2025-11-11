@@ -1,10 +1,17 @@
+// lib/main.dart
+// MAIN ENTRY — sets up theme, routes, and the home screen.
+//
+// Notes:
+// - AppBar uses a soft "sky blue".
+// - Adds simple routes for About / Learn / Help / Privacy / Terms.
+// - No external packages required; pure Flutter.
+
 import 'package:flutter/material.dart';
-import 'screens/converter_home.dart';
-import 'pages/docs_placeholder.dart';
-import 'pages/privacy_page.dart';
-import 'pages/terms_page.dart';
+
+import 'package:unit_converter/converter.dart';
 
 void main() {
+  // Standard Flutter bootstrap.
   runApp(const UnitConverterApp());
 }
 
@@ -13,51 +20,35 @@ class UnitConverterApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // THEME:
+    // - Soft, readable blue for AppBar.
+    // - Light surface background (we also add a background gradient in the home).
+    final skyBlue = const Color(0xFF7EC8F8); // soft blue-sky tone
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Unit Converter',
+      title: 'Convert Units Pro',
       theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.lightBlue,
+        primaryColor: skyBlue,
+        colorScheme: ColorScheme.fromSeed(seedColor: skyBlue, brightness: Brightness.light),
         appBarTheme: AppBarTheme(
-          backgroundColor: Colors.lightBlue.shade300, // soft sky blue
+          backgroundColor: skyBlue,
           foregroundColor: Colors.white,
-          elevation: 3,
-          scrolledUnderElevation: 0,
+          centerTitle: true,
+          elevation: 2,
         ),
+        useMaterial3: true,
       ),
-      // Routes for internal pages we added
+      // HOME: our converter + new content sections
+      home: const ConverterHome(),
+      // SIMPLE ROUTES: basic content pages for AdSense "publisher-content"
       routes: {
-        '/': (_) => const AppBackground(child: ConverterHome()),
-        '/docs': (_) => const AppBackground(child: DocsPlaceholderPage()),
-        '/privacy': (_) => const AppBackground(child: PrivacyPage()),
-        '/terms': (_) => const AppBackground(child: TermsPage()),
+        AboutPage.route: (_) => const AboutPage(),
+        LearnPage.route: (_) => const LearnPage(),
+        HelpPage.route: (_) => const HelpPage(),
+        PrivacyPage.route: (_) => const PrivacyPage(),
+        TermsPage.route: (_) => const TermsPage(),
       },
-      initialRoute: '/',
-    );
-  }
-}
-
-/// Soft sky blue background gradient wrapper
-class AppBackground extends StatelessWidget {
-  final Widget child;
-  const AppBackground({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.lightBlue.shade50,
-            Colors.lightBlue.shade100,
-            Colors.lightBlue.shade200,
-          ],
-        ),
-      ),
-      child: child,
     );
   }
 }
