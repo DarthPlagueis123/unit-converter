@@ -12,6 +12,7 @@ export 'pages/learn_page.dart';
 export 'pages/help_page.dart';
 export 'pages/privacy_page.dart';
 export 'pages/terms_page.dart';
+export 'pages/docs_placeholder.dart';
 export 'widgets/formula_panel.dart';
 export 'widgets/footer.dart';
 export 'widgets/glass_card.dart';

@@ -48,6 +48,7 @@ class UnitConverterApp extends StatelessWidget {
         HelpPage.route: (_) => const HelpPage(),
         PrivacyPage.route: (_) => const PrivacyPage(),
         TermsPage.route: (_) => const TermsPage(),
+        DocsPlaceholderPage.route: (_) => const DocsPlaceholderPage(),
       },
     );
   }

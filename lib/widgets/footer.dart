@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'feedback_dialog.dart';
+import 'package:unit_converter/converter.dart';
 
 /// Footer with internal routes, external GitHub links, mailto fallback,
 /// and a Buy Me a Coffee button.
@@ -122,10 +123,10 @@ class SiteFooter extends StatelessWidget {
       context,
       title: 'Product',
       items: [
-        (label: 'Unit Converter', route: '/', external: null),
-        (label: 'Formula Breakdown', route: '/docs', external: null),
-        (label: 'Categories', route: '/docs', external: null),
-        (label: 'What’s New', route: '/docs', external: null),
+        (label: 'Unit Converter', route: null, external: null),
+        (label: 'About', route: AboutPage.route, external: null),
+        (label: 'Learn More', route: LearnPage.route, external: null),
+        (label: 'Categories', route: AboutPage.route, external: null),
       ],
     );
 
@@ -133,8 +134,8 @@ class SiteFooter extends StatelessWidget {
       context,
       title: 'Resources',
       items: [
-        (label: 'Docs (coming soon)', route: '/docs', external: null),
-        (label: 'Tips & Tricks', route: '/docs', external: null),
+        (label: 'Help & FAQ', route: HelpPage.route, external: null),
+        (label: 'Tips & Tricks', route: DocsPlaceholderPage.route, external: null),
         (label: 'Report a Bug', route: null, external: _bugUrl),
         (label: 'Request a Feature', route: null, external: _featureUrl),
       ],
@@ -144,9 +145,9 @@ class SiteFooter extends StatelessWidget {
       context,
       title: 'Legal',
       items: [
-        (label: 'Privacy Policy', route: '/privacy', external: null),
-        (label: 'Terms of Use', route: '/terms', external: null),
-        (label: 'Cookie Policy', route: '/docs', external: null),
+        (label: 'Privacy Policy', route: PrivacyPage.route, external: null),
+        (label: 'Terms of Use', route: TermsPage.route, external: null),
+        (label: 'Cookie Policy', route: PrivacyPage.route, external: null),
       ],
     );
 
