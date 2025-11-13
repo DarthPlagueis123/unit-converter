@@ -186,13 +186,34 @@ class _ConverterHomeState extends State<ConverterHome> {
 
   Widget _buildIntro() {
     return GlassCard(
-      child: const Padding(
-        padding: EdgeInsets.all(18.0),
-        child: Text(
-          'Convert Units Pro is a free, fast, and privacy-friendly converter. '
-          'Type a value and see precise results immediately, with formula breakdowns where applicable. '
-          'No login required — works on desktop and mobile.',
-          style: TextStyle(fontSize: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'About this tool',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Unit Converter is built to deliver fast, accurate conversions with clarity and transparency. '
+              'Whether you\'re converting lengths for a DIY project, checking food measurements in the kitchen, '
+              'or working with data storage units, this tool gives clear, explainable results. We prioritize privacy — no account is required and core computations are handled client-side when possible. ',
+            ),
+            SizedBox(height: 8),
+            Text(
+              'How to get the best results: enter the numeric value you want to convert, select the correct category (for example, Length, Mass, Temperature, or Data), and choose the source and target units. Use the formatting controls to set the number of decimal places and toggle thousands separators for readability. For temperature conversions, remember the formulas require offsets (for example, °F = °C × 9/5 + 32). For data units, be aware of decimal vs. binary prefixes — KB (decimal) means 1000 bytes while KiB (binary) means 1024 bytes.',
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Practical scenarios: engineers should keep significant digits until the final step to avoid rounding errors; travelers converting miles to kilometers should note whether distances are nautical or statute; and developers dealing with storage should pick the correct prefix convention. This homepage includes quick tips and links to deeper documentation and examples so you can learn why results look the way they do.',
+            ),
+            SizedBox(height: 8),
+            Text(
+              'We created this site to be useful across devices. If you rely on a particular conversion frequently, consider bookmarking the page or using the install/PWA capabilities of modern browsers. For questions or feature requests, use the Feedback button in the footer — we read every message and use them to improve the tool.',
+            ),
+          ],
         ),
       ),
     );

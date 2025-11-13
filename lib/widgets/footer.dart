@@ -58,7 +58,12 @@ class SiteFooter extends StatelessWidget {
               child: InkWell(
                 onTap: () async {
                   if (item.route != null) {
-                    if (context.mounted) Navigator.of(context).pushNamed(item.route!);
+                    // Special token to navigate to the app home (MaterialApp.home)
+                    if (item.route == 'HOME') {
+                      if (context.mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+                    } else {
+                      if (context.mounted) Navigator.of(context).pushNamed(item.route!);
+                    }
                   } else if (item.external != null) {
                     await _open(context, item.external!);
                   } else {
@@ -123,7 +128,6 @@ class SiteFooter extends StatelessWidget {
       context,
       title: 'Product',
       items: [
-        (label: 'Unit Converter', route: null, external: null),
         (label: 'About', route: AboutPage.route, external: null),
         (label: 'Learn More', route: LearnPage.route, external: null),
         (label: 'Categories', route: AboutPage.route, external: null),
